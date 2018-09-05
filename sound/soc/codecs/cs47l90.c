@@ -2958,6 +2958,7 @@ static int cs47l90_probe(struct platform_device *pdev)
 		cs47l90->core.adsp[i].num = i + 1;
 		cs47l90->core.adsp[i].type = WMFW_ADSP2;
 		cs47l90->core.adsp[i].rev = 2;
+		cs47l90->core.adsp[i].suffix = "";
 		cs47l90->core.adsp[i].dev = madera->dev;
 		cs47l90->core.adsp[i].regmap = madera->regmap_32bit;
 

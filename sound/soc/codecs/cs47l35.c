@@ -2015,6 +2015,7 @@ static int cs47l35_probe(struct platform_device *pdev)
 		cs47l35->core.adsp[i].num = i + 1;
 		cs47l35->core.adsp[i].type = WMFW_ADSP2;
 		cs47l35->core.adsp[i].rev = 1;
+		cs47l35->core.adsp[i].suffix = "";
 		cs47l35->core.adsp[i].dev = madera->dev;
 		cs47l35->core.adsp[i].regmap = madera->regmap_32bit;
 
