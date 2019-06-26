@@ -964,6 +964,23 @@ static const struct reg_sequence cs35l41_pdn_patch[] = {
 	{0x00000040, 0x00000033},
 };
 
+static int cs35l41_pcm_source_event(struct snd_soc_dapm_widget *w,
+		struct snd_kcontrol *kcontrol, int event)
+{
+	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
+	struct cs35l41_private *cs35l41 = snd_soc_codec_get_drvdata(codec);
+	unsigned int source;
+
+	regmap_read(cs35l41->regmap, CS35L41_DAC_PCM1_SRC, &source);
+
+	if (source == CS35L41_INPUT_SRC_ASPRX1)
+		cs35l41->halo_routed = false;
+	else if (source == CS35L41_INPUT_DSP_TX1)
+		cs35l41->halo_routed = true;
+
+	return 0;
+}
+
 static int cs35l41_main_amp_event(struct snd_soc_dapm_widget *w,
 		struct snd_kcontrol *kcontrol, int event)
 {
@@ -996,7 +1013,7 @@ static int cs35l41_main_amp_event(struct snd_soc_dapm_widget *w,
 
 		usleep_range(1000, 1100);
 
-		if (cs35l41->dsp.running) {
+		if (cs35l41->dsp.running && cs35l41->halo_routed) {
 			regmap_read(cs35l41->regmap, CS35L41_DSP_MBOX_2,
 				    (unsigned int *)&fw_status);
 			switch(fw_status) {
@@ -1030,7 +1047,7 @@ static int cs35l41_main_amp_event(struct snd_soc_dapm_widget *w,
 				CS35L41_AMP_MUTE_MASK, CS35L41_AMP_MUTE_MASK);
  		break;
 	case SND_SOC_DAPM_POST_PMD:
-		if (cs35l41->dsp.running) {
+		if (cs35l41->dsp.running && cs35l41->halo_routed) {
 			if (cs35l41->reload_tuning) {
 				mboxcmd = CSPL_MBOX_CMD_STOP_PRE_REINIT;
 				/*
@@ -1121,7 +1138,8 @@ static const struct snd_soc_dapm_widget cs35l41_dapm_widgets[] = {
 	SND_SOC_DAPM_MUX("ASP TX4 Source", SND_SOC_NOPM, 0, 0, &asp_tx4_mux),
 	SND_SOC_DAPM_MUX("DSP RX1 Source", SND_SOC_NOPM, 0, 0, &dsp_rx1_mux),
 	SND_SOC_DAPM_MUX("DSP RX2 Source", SND_SOC_NOPM, 0, 0, &dsp_rx2_mux),
-	SND_SOC_DAPM_MUX("PCM Source", SND_SOC_NOPM, 0, 0, &pcm_source_mux),
+	SND_SOC_DAPM_MUX_E("PCM Source", SND_SOC_NOPM, 0, 0, &pcm_source_mux,
+				cs35l41_pcm_source_event, SND_SOC_DAPM_PRE_PMU),
 	SND_SOC_DAPM_SWITCH("DRE", SND_SOC_NOPM, 0, 0, &dre_ctrl),
 };
 
