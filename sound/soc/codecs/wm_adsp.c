@@ -4043,16 +4043,17 @@ int wm_adsp2_codec_probe(struct wm_adsp *dsp, struct snd_soc_codec *codec)
 	struct snd_soc_dapm_context *dapm = snd_soc_codec_get_dapm(codec);
 	char preload[32];
 
-	if (!dsp->no_preloader){
-		if (codec->component.name_prefix)
-			snprintf(preload, ARRAY_SIZE(preload), "%s %s Preload",
-				 codec->component.name_prefix, dsp->name);
-		else
-			snprintf(preload, ARRAY_SIZE(preload), "%s Preload",
-				 dsp->name);
+	if (codec->component.name_prefix)
+		snprintf(preload, ARRAY_SIZE(preload), "%s %s Preload",
+			 codec->component.name_prefix, dsp->name);
+	else
+		snprintf(preload, ARRAY_SIZE(preload), "%s Preload",
+			 dsp->name);
 
+	if (dsp->preloaded)
+		snd_soc_dapm_force_enable_pin(dapm, preload);
+	else
 		snd_soc_dapm_disable_pin(dapm, preload);
-	}
 
 	wm_adsp2_init_debugfs(dsp, codec);
 
@@ -4061,7 +4062,7 @@ int wm_adsp2_codec_probe(struct wm_adsp *dsp, struct snd_soc_codec *codec)
 	if (!dsp->fw_ctrl.private_value)
 		return 0;
 
-        return snd_soc_add_codec_controls(codec, &dsp->fw_ctrl, 1);
+	return snd_soc_add_codec_controls(codec, &dsp->fw_ctrl, 1);
 }
 EXPORT_SYMBOL_GPL(wm_adsp2_codec_probe);
 
