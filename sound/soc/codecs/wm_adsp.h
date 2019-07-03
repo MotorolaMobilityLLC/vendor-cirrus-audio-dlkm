@@ -105,7 +105,6 @@ struct wm_adsp {
 	int fw;
 	int fw_ver;
 
-	bool no_preloader;
 	bool preloaded;
 	bool booted;
 	bool running;
