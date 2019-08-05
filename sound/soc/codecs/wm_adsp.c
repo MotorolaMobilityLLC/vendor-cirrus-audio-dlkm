@@ -1257,9 +1257,11 @@ static int wm_coeff_write_control(struct wm_coeff_ctl *ctl,
 				  const void *buf, size_t len)
 {
 	struct wm_adsp *dsp = ctl->dsp;
-	void *scratch;
+	void *scratch, *temp;
+	size_t to_write = PAGE_SIZE;
 	int ret;
 	unsigned int reg;
+	unsigned int addr_div;
 
 	ret = wm_coeff_base_reg(ctl, &reg);
 	if (ret)
@@ -1269,15 +1271,35 @@ static int wm_coeff_write_control(struct wm_coeff_ctl *ctl,
 	if (!scratch)
 		return -ENOMEM;
 
-	ret = regmap_raw_write(dsp->regmap, reg, scratch,
-			       len);
-	if (ret) {
-		adsp_err(dsp, "Failed to write %zu bytes to %x: %d\n",
-			 len, reg, ret);
-		kfree(scratch);
-		return ret;
+	switch (dsp->type) {
+	case WMFW_ADSP1:
+	case WMFW_ADSP2:
+		addr_div = 2;
+		break;
+	default:
+		addr_div = 1;
+		break;
 	}
-	adsp_dbg(dsp, "Wrote %zu bytes to %x\n", len, reg);
+
+	temp = scratch;
+	while (len > 0) {
+		if (len < to_write)
+			to_write = len;
+
+		ret = regmap_raw_write(dsp->regmap, reg, temp, to_write);
+		if (ret) {
+			adsp_err(dsp, "Failed to write %zu bytes to %x: %d\n",
+				 to_write, reg, ret);
+			kfree(scratch);
+			return ret;
+		}
+
+		adsp_dbg(dsp, "Wrote %zu bytes to %x\n", to_write, reg);
+
+		temp += to_write;
+		reg += to_write / addr_div;
+		len -= to_write;
+	}
 
 	kfree(scratch);
 
