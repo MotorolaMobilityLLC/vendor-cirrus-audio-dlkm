@@ -467,6 +467,62 @@ static int cs35l41_reload_tuning_put(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+static int cs35l41_boost_voltage_get(struct snd_kcontrol *kcontrol,
+				     struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct cs35l41_private *cs35l41 = snd_soc_codec_get_drvdata(codec);
+	unsigned int voltage;
+	unsigned int pwr_ctrl3;
+	int ret;
+
+	ret = regmap_read(cs35l41->regmap, CS35L41_BSTCVRT_VCTRL1, &voltage);
+	if (ret != 0) {
+		voltage = 0;
+		dev_err(cs35l41->dev, "regmap_read failed (%d)\n", ret);
+	}
+	voltage = (voltage * 50) + 2500;
+	ret = regmap_read(cs35l41->regmap, CS35L41_PWR_CTRL3, &pwr_ctrl3);
+	if (ret != 0) {
+		voltage = 0;
+		dev_err(cs35l41->dev, "regmap_read failed (%d)\n", ret);
+	}
+	if (pwr_ctrl3 & CS35L41_CLASSH_EN_MASK)
+		voltage = 0;
+	ucontrol->value.integer.value[0] = voltage;
+	return 0;
+}
+
+static int cs35l41_boost_voltage_put(struct snd_kcontrol *kcontrol,
+				     struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct cs35l41_private *cs35l41 = snd_soc_codec_get_drvdata(codec);
+	unsigned int voltage = ucontrol->value.integer.value[0];
+
+	if (voltage == 0) {
+		regmap_update_bits(cs35l41->regmap, CS35L41_BSTCVRT_VCTRL2,
+				   CS35L41_BST_CTL_SEL_MASK,
+				   CS35L41_BST_CTL_SEL_CLASSH);
+		regmap_write(cs35l41->regmap, CS35L41_BSTCVRT_VCTRL1, 0);
+		regmap_update_bits(cs35l41->regmap, CS35L41_PWR_CTRL3,
+				   CS35L41_CLASSH_EN_MASK,
+				   CS35L41_CLASSH_EN_MASK);
+	} else {
+		if (voltage < 2550)
+			voltage = 0;
+		else
+			voltage = (voltage - 2500) / 50;
+		regmap_write(cs35l41->regmap, CS35L41_BSTCVRT_VCTRL1, voltage);
+		regmap_update_bits(cs35l41->regmap, CS35L41_BSTCVRT_VCTRL2,
+				   CS35L41_BST_CTL_SEL_MASK,
+				   CS35L41_BST_CTL_SEL_REG);
+		regmap_update_bits(cs35l41->regmap, CS35L41_PWR_CTRL3,
+				   CS35L41_CLASSH_EN_MASK, 0);
+	}
+	return 0;
+}
+
 static bool cs35l41_is_csplmboxsts_correct(enum cs35l41_cspl_mboxcmd cmd,
 					   enum cs35l41_cspl_mboxstate sts)
 {
@@ -728,6 +784,8 @@ static const struct snd_kcontrol_new cs35l41_aud_controls[] = {
 		       cs35l41_fast_switch_en_get, cs35l41_fast_switch_en_put),
 	SOC_SINGLE_EXT("Firmware Reload Tuning", SND_SOC_NOPM, 0, 1, 0,
 			cs35l41_reload_tuning_get, cs35l41_reload_tuning_put),
+	SOC_SINGLE_EXT("Boost Voltage mV", SND_SOC_NOPM, 0, 11000, 0,
+			cs35l41_boost_voltage_get, cs35l41_boost_voltage_put),
 	SOC_SINGLE("GLOBAL_EN from GPIO Control", CS35L41_PWR_CTRL1, 8, 1, 0),
 	WM_ADSP2_PRELOAD_SWITCH("DSP1", 1),
 };
@@ -1184,7 +1242,6 @@ static const struct snd_soc_dapm_widget cs35l41_dapm_widgets[] = {
 	SND_SOC_DAPM_ADC("VPMON ADC", NULL, CS35L41_PWR_CTRL2, 8, 0),
 	SND_SOC_DAPM_ADC("VBSTMON ADC", NULL, CS35L41_PWR_CTRL2, 9, 0),
 	SND_SOC_DAPM_ADC("TEMPMON ADC", NULL, CS35L41_PWR_CTRL2, 10, 0),
-	SND_SOC_DAPM_ADC("CLASS H", NULL, CS35L41_PWR_CTRL3, 4, 0),
 
 	SND_SOC_DAPM_OUT_DRV_E("Main AMP", CS35L41_PWR_CTRL2, 0, 0, NULL, 0,
 				cs35l41_main_amp_event,
@@ -1288,14 +1345,13 @@ static const struct snd_soc_dapm_route cs35l41_audio_map[] = {
 	{"ASPRX2", NULL, "AMP Enable"},
 	{"ASPRX1", NULL, "AOU Enable"},
 	{"ASPRX2", NULL, "AOU Enable"},
-	{"DRE", "DRE Switch", "CLASS H"},
-	{"Main AMP", NULL, "CLASS H"},
+	{"DRE", "DRE Switch", "PCM Source"},
+	{"Main AMP", NULL, "PCM Source"},
 	{"Main AMP", NULL, "DRE"},
 	{"SPK", NULL, "Main AMP"},
 
 	{"PCM Source", "ASP", "ASPRX1"},
 	{"PCM Source", "DSP", "DSP1"},
-	{"CLASS H", NULL, "PCM Source"},
 
 };
 
