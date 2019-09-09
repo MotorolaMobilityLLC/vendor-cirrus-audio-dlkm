@@ -2,7 +2,7 @@
 EXTRA_CFLAGS += -Wall
 EXTRA_CFLAGS += -I$(TOP)/vendor/cirrus/audio/dlkm/include
 
-ifeq ($(CONFIG_ARCH_SDM450), y)
+ifneq ($(filter m y,$(CONFIG_SND_SOC_CS47L35)),)
 EXTRA_CFLAGS += -DCONFIG_MADERA_IRQ_CS47L35
 cirrus_irq-madera-objs = irq-madera.o irq-madera-cs47l35.o
 else
