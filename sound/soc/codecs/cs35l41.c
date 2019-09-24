@@ -1598,10 +1598,11 @@ static int cs35l41_pcm_hw_params(struct snd_pcm_substream *substream,
 	struct cs35l41_private *cs35l41 = snd_soc_codec_get_drvdata(dai->codec);
 	int i, ret;
 	unsigned int rate = params_rate(params);
+        unsigned int channels = (cs35l41->i2s_mode) ? 2:params_channels(params);
 	struct snd_soc_codec *codec = dai->codec;
 	u8 asp_width, asp_wl;
 	int sclk_rate = params_rate(params) * params_width(params)
-			* params_channels(params);
+			* channels;
 
 	if ((cs35l41->clksrc == CS35L41_PLLSRC_SCLK) &&
 		(cs35l41->sclk != sclk_rate)) {
