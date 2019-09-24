@@ -2021,16 +2021,18 @@ int cs35l41_probe(struct cs35l41_private *cs35l41,
 	init_completion(&cs35l41->global_pdn_done);
 	init_completion(&cs35l41->global_pup_done);
 
-	ret = devm_request_threaded_irq(cs35l41->dev, cs35l41->irq, NULL,
-				cs35l41_irq, IRQF_ONESHOT | irq_pol,
-				"cs35l41", cs35l41);
+	dev_info(cs35l41->dev, "%s: irq %d\n", __func__, cs35l41->irq);
+	if (cs35l41->irq > 0) {
+		ret = devm_request_threaded_irq(cs35l41->dev, cs35l41->irq, NULL,
+					cs35l41_irq, IRQF_ONESHOT | irq_pol,
+					"cs35l41", cs35l41);
 
-	/* CS35L41 needs INT for PDN_DONE */
-	if (ret != 0) {
-		dev_err(cs35l41->dev, "Failed to request IRQ: %d\n", ret);
-		goto err;
+		/* CS35L41 needs INT for PDN_DONE */
+		if (ret != 0) {
+			dev_err(cs35l41->dev, "Failed to request IRQ: %d\n", ret);
+			goto err;
+		}
 	}
-
 	/* Set interrupt masks for critical errors */
 	regmap_write(cs35l41->regmap, CS35L41_IRQ1_MASK1,
 			CS35L41_INT1_MASK_DEFAULT);
