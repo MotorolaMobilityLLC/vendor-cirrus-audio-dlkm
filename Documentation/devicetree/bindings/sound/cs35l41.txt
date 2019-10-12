@@ -116,6 +116,8 @@ Optional properties:
   - cirrus,fast-switch : Specify file names for Fast Use Case Switching DSP
     feature.  Files names are comma-separated strings.
 
+  - cirrus,regs-patch : Register patch applyed at probe after errata patch.
+
 Optional H/G Algorithm sub-node:
 
   The cs35l41 node can have a single "cirrus,classh-internal-algo" sub-node
