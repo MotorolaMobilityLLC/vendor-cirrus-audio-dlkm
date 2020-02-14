@@ -3339,166 +3339,46 @@ static int madera_hw_params_rate(struct snd_pcm_substream *substream,
 	struct snd_soc_component *component = dai->component;
 	struct madera_priv *priv = snd_soc_component_get_drvdata(component);
 	struct madera_dai_priv *dai_priv = &priv->dai[dai->id - 1];
-	int base = dai->driver->base;
-	int ret = 0;
+
 	int i, sr_val;
-	unsigned int cur, tar;
-	bool change_rate_domain = false;
-	u32 rx_sampleszbits, rx_samplerate;
+	unsigned int reg;
 
-	rx_sampleszbits = snd_pcm_format_width(params_format(params));
-	if (rx_sampleszbits < 16)
-		rx_sampleszbits = 16;
-
-	/* currently we use a single sample rate for SYSCLK */
 	for (i = 0; i < ARRAY_SIZE(madera_sr_vals); i++)
-		if (madera_sr_vals[i] == params_rate(params)) {
-			rx_samplerate = params_rate(params);
+		if (madera_sr_vals[i] == params_rate(params))
 			break;
-		}
 
 	if (i == ARRAY_SIZE(madera_sr_vals)) {
 		madera_aif_err(dai, "Unsupported sample rate %dHz\n",
-				params_rate(params));
+			       params_rate(params));
 		return -EINVAL;
 	}
 	sr_val = i;
 
-	switch (dai->id) {
-	case 4: /* cs47l35-slim1 */
-		priv->rx1_sampleszbits = rx_sampleszbits;
-		priv->rx1_samplerate = rx_samplerate;
-		break;
-	case 5: /* cs47l35-slim2 */
-		priv->rx2_sampleszbits = rx_sampleszbits;
-		priv->rx2_samplerate = rx_samplerate;
-		break;
-	case 6:
-	default:
-		break;
-	}
-
-	if (base) {
-		switch (dai_priv->clk) {
-		case MADERA_CLK_SYSCLK_1:
-			tar = 0 << MADERA_AIF1_RATE_SHIFT;
-			break;
-		case MADERA_CLK_SYSCLK_2:
-			tar = 1 << MADERA_AIF1_RATE_SHIFT;
-			break;
-		case MADERA_CLK_SYSCLK_3:
-			tar = 2 << MADERA_AIF1_RATE_SHIFT;
-			break;
-		case MADERA_CLK_ASYNCCLK_1:
-			tar = 8 << MADERA_AIF1_RATE_SHIFT;
-			break;
-		case MADERA_CLK_ASYNCCLK_2:
-			tar = 9 << MADERA_AIF1_RATE_SHIFT;
-			break;
-		default:
-			madera_aif_err(dai, "Illegal clock id %d\n",
-				       dai_priv->clk);
-			return -EINVAL;
-		}
-
-		ret = regmap_read(priv->madera->regmap,
-				  base + MADERA_AIF_RATE_CTRL, &cur);
-		if (ret != 0) {
-			madera_aif_err(dai, "Failed to check rate: %d\n", ret);
-			return ret;
-		}
-
-		if ((cur & MADERA_AIF1_RATE_MASK) !=
-		    (tar & MADERA_AIF1_RATE_MASK)) {
-			change_rate_domain = true;
-
-			mutex_lock(&priv->rate_lock);
-
-			if (!madera_can_change_grp_rate(priv,
-						base + MADERA_AIF_RATE_CTRL)) {
-				madera_aif_warn(dai,
-						"Cannot change rate while active\n");
-				ret = -EBUSY;
-				goto out;
-			}
-
-			/* Guard the rate change with SYSCLK cycles */
-			madera_spin_sysclk(priv);
-		}
-	}
-
 	switch (dai_priv->clk) {
 	case MADERA_CLK_SYSCLK_1:
-		snd_soc_component_update_bits(component, MADERA_SAMPLE_RATE_1,
-					      MADERA_SAMPLE_RATE_1_MASK, sr_val);
-		if (!base)
-			break;
-
-		snd_soc_component_update_bits(component,
-					      base + MADERA_AIF_RATE_CTRL,
-					      MADERA_AIF1_RATE_MASK,
-					      0 << MADERA_AIF1_RATE_SHIFT);
+		reg = MADERA_SAMPLE_RATE_1;
 		break;
 	case MADERA_CLK_SYSCLK_2:
-		snd_soc_component_update_bits(component, MADERA_SAMPLE_RATE_2,
-					      MADERA_SAMPLE_RATE_2_MASK, sr_val);
-		if (!base)
-			break;
-
-		snd_soc_component_update_bits(component,
-					      base + MADERA_AIF_RATE_CTRL,
-					      MADERA_AIF1_RATE_MASK,
-					      1 << MADERA_AIF1_RATE_SHIFT);
+		reg = MADERA_SAMPLE_RATE_2;
 		break;
 	case MADERA_CLK_SYSCLK_3:
-		snd_soc_component_update_bits(component, MADERA_SAMPLE_RATE_3,
-					      MADERA_SAMPLE_RATE_3_MASK, sr_val);
-		if (!base)
-			break;
-
-		snd_soc_component_update_bits(component,
-					      base + MADERA_AIF_RATE_CTRL,
-					      MADERA_AIF1_RATE_MASK,
-					      2 << MADERA_AIF1_RATE_SHIFT);
+		reg = MADERA_SAMPLE_RATE_3;
 		break;
 	case MADERA_CLK_ASYNCCLK_1:
-		snd_soc_component_update_bits(component,
-					      MADERA_ASYNC_SAMPLE_RATE_1,
-					      MADERA_ASYNC_SAMPLE_RATE_1_MASK,
-					      sr_val);
-		if (!base)
-			break;
-
-		snd_soc_component_update_bits(component,
-					      base + MADERA_AIF_RATE_CTRL,
-					      MADERA_AIF1_RATE_MASK,
-					      8 << MADERA_AIF1_RATE_SHIFT);
+		reg = MADERA_ASYNC_SAMPLE_RATE_1;
 		break;
 	case MADERA_CLK_ASYNCCLK_2:
-		snd_soc_component_update_bits(component,
-					      MADERA_ASYNC_SAMPLE_RATE_2,
-					      MADERA_ASYNC_SAMPLE_RATE_2_MASK,
-					      sr_val);
-		if (!base)
-			break;
-
-		snd_soc_component_update_bits(component,
-					      base + MADERA_AIF_RATE_CTRL,
-					      MADERA_AIF1_RATE_MASK,
-					      9 << MADERA_AIF1_RATE_SHIFT);
+		reg = MADERA_ASYNC_SAMPLE_RATE_2;
 		break;
 	default:
 		madera_aif_err(dai, "Invalid clock %d\n", dai_priv->clk);
-		ret = -EINVAL;
+		return -EINVAL;
 	}
 
-out:
-	if (change_rate_domain) {
-		madera_spin_sysclk(priv);
-		mutex_unlock(&priv->rate_lock);
-	}
+	snd_soc_component_update_bits(component, reg, MADERA_SAMPLE_RATE_1_MASK,
+				      sr_val);
 
-	return ret;
+	return 0;
 }
 
 static int madera_aif_cfg_changed(struct snd_soc_component *component,
@@ -3686,47 +3566,106 @@ static int madera_dai_set_sysclk(struct snd_soc_dai *dai,
 		snd_soc_component_get_dapm(component);
 	struct madera_priv *priv = snd_soc_component_get_drvdata(component);
 	struct madera_dai_priv *dai_priv = &priv->dai[dai->id - 1];
+	int base = dai->driver->base;
 	struct snd_soc_dapm_route routes[2];
-	int is_sync;
+	int is_sync, ret;
+	unsigned int cur, tar;
 
 	is_sync = madera_is_syncclk(clk_id);
 	if (is_sync < 0) {
-		dev_err(component->dev, "Illegal DAI clock id %d\n", clk_id);
+		madera_aif_err(dai, "Illegal DAI clock id %d\n", clk_id);
 		return is_sync;
 	}
 
 	if (dai->active) {
-		dev_err(component->dev, "Can't change clock on active DAI %d\n",
-			dai->id);
+		madera_aif_err(dai, "Can't change clock on active DAI %d\n",
+			       dai->id);
 		return -EBUSY;
 	}
 
-	dev_dbg(component->dev, "Setting AIF%d to %s\n", dai->id,
-		is_sync ? "SYSCLK" : "ASYNCCLK");
-
-	if (is_sync == madera_is_syncclk(dai_priv->clk)) {
-		dai_priv->clk = clk_id;
-		return 0;
-	}
-
-	/*
-	 * A connection to SYSCLK is always required, we only add and remove
-	 * a connection to ASYNCCLK
-	 */
-	memset(&routes, 0, sizeof(routes));
-	routes[0].sink = dai->driver->capture.stream_name;
-	routes[1].sink = dai->driver->playback.stream_name;
-	routes[0].source = "ASYNCCLK";
-	routes[1].source = "ASYNCCLK";
-
-	if (is_sync)
-		snd_soc_dapm_del_routes(dapm, routes, ARRAY_SIZE(routes));
-	else
-		snd_soc_dapm_add_routes(dapm, routes, ARRAY_SIZE(routes));
+	madera_aif_err(dai, "Setting AIF%d to %s\n", dai->id,
+		       is_sync ? "SYSCLK" : "ASYNCCLK");
 
 	dai_priv->clk = clk_id;
 
-	return snd_soc_dapm_sync(dapm);
+	if (is_sync != madera_is_syncclk(dai_priv->clk)) {
+		/*
+		 * A connection to SYSCLK is always required, we only add and
+		 * remove a connection to ASYNCCLK
+		 */
+		memset(&routes, 0, sizeof(routes));
+		routes[0].sink = dai->driver->capture.stream_name;
+		routes[1].sink = dai->driver->playback.stream_name;
+		routes[0].source = "ASYNCCLK";
+		routes[1].source = "ASYNCCLK";
+
+		if (is_sync)
+			snd_soc_dapm_del_routes(dapm, routes,
+						ARRAY_SIZE(routes));
+		else
+			snd_soc_dapm_add_routes(dapm, routes,
+						ARRAY_SIZE(routes));
+
+		ret = snd_soc_dapm_sync(dapm);
+		if (ret) {
+			madera_aif_err(dai, "Failed to dapm_sync: %d\n", ret);
+			return ret;
+		}
+	}
+
+
+	if (!base)
+		return 0;
+
+	switch (dai_priv->clk) {
+	case MADERA_CLK_SYSCLK_1:
+		tar = 0 << MADERA_AIF1_RATE_SHIFT;
+		break;
+	case MADERA_CLK_SYSCLK_2:
+		tar = 1 << MADERA_AIF1_RATE_SHIFT;
+		break;
+	case MADERA_CLK_SYSCLK_3:
+		tar = 2 << MADERA_AIF1_RATE_SHIFT;
+		break;
+	case MADERA_CLK_ASYNCCLK_1:
+		tar = 8 << MADERA_AIF1_RATE_SHIFT;
+		break;
+	case MADERA_CLK_ASYNCCLK_2:
+		tar = 9 << MADERA_AIF1_RATE_SHIFT;
+		break;
+	default:
+		madera_aif_err(dai, "Invalid clock %d\n", dai_priv->clk);
+		return -EINVAL;
+	}
+
+	ret = regmap_read(priv->madera->regmap,
+			  base + MADERA_AIF_RATE_CTRL, &cur);
+	if (ret != 0) {
+		madera_aif_err(dai, "Failed to check rate: %d\n", ret);
+		return ret;
+	}
+
+	if ((cur & MADERA_AIF1_RATE_MASK) == (tar & MADERA_AIF1_RATE_MASK))
+		return 0;
+
+	mutex_lock(&priv->rate_lock);
+
+	if (!madera_can_change_grp_rate(priv, base + MADERA_AIF_RATE_CTRL)) {
+		madera_aif_warn(dai, "Cannot change rate while active\n");
+		ret = -EBUSY;
+		goto out;
+	}
+
+	/* Guard the rate change with SYSCLK cycles */
+	madera_spin_sysclk(priv);
+	snd_soc_component_update_bits(component, base + MADERA_AIF_RATE_CTRL,
+				      MADERA_AIF1_RATE_MASK, tar);
+	madera_spin_sysclk(priv);
+
+out:
+	mutex_unlock(&priv->rate_lock);
+
+	return ret;
 }
 
 static int madera_set_tristate(struct snd_soc_dai *dai, int tristate)
