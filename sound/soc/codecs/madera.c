@@ -3695,6 +3695,9 @@ static int madera_dai_set_sysclk(struct snd_soc_dai *dai,
 		return is_sync;
 	}
 
+	if (is_sync == madera_is_syncclk(dai_priv->clk))
+		return 0;
+
 	if (dai->active) {
 		dev_err(component->dev, "Can't change clock on active DAI %d\n",
 			dai->id);
@@ -3703,11 +3706,6 @@ static int madera_dai_set_sysclk(struct snd_soc_dai *dai,
 
 	dev_dbg(component->dev, "Setting AIF%d to %s\n", dai->id,
 		is_sync ? "SYSCLK" : "ASYNCCLK");
-
-	if (is_sync == madera_is_syncclk(dai_priv->clk)) {
-		dai_priv->clk = clk_id;
-		return 0;
-	}
 
 	/*
 	 * A connection to SYSCLK is always required, we only add and remove
