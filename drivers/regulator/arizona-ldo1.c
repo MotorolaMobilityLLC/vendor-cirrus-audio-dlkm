@@ -192,6 +192,7 @@ static const struct regulator_init_data arizona_ldo1_wm5110 = {
 	.num_consumer_supplies = 1,
 };
 
+/*
 static const struct regulator_desc madera_ldo1 = {
 	.name = "LDO1",
 	.supply_name = "LDOVDD",
@@ -207,6 +208,7 @@ static const struct regulator_desc madera_ldo1 = {
 
 	.owner = THIS_MODULE,
 };
+*/
 
 static const struct regulator_init_data madera_ldo1_default = {
 	.constraints = {
