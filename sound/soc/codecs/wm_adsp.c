@@ -1013,10 +1013,12 @@ const struct snd_kcontrol_new wm_adsp_fw_controls[] = {
 };
 EXPORT_SYMBOL_GPL(wm_adsp_fw_controls);
 
+/*
 static const struct snd_kcontrol_new wm_adsp_ao_fw_controls[] = {
 	SOC_ENUM_EXT("DSP1AO Firmware", wm_adsp_fw_enum[0],
 		     wm_adsp_fw_get, wm_adsp_fw_put),
 };
+*/
 
 static struct wm_adsp_region const *wm_adsp_find_region(struct wm_adsp *dsp,
 							int type)
