@@ -10,5 +10,6 @@ cirrus_cs35l45-objs = cs35l45.o cs35l45-tables.o wm_adsp.o cs35l45-i2c.o
 else
 cirrus_cs35l45-objs = cs35l45.o cs35l45-tables.o wm_adsp.o cs35l45-spi.o
 endif
-obj-m += cirrus_cs35l45.o
+cirrus_cs42l42-objs = cs42l42.o
+obj-m += cirrus_cs35l45.o cirrus_cs42l42.o
 endif
