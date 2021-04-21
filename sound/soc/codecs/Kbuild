@@ -2,16 +2,13 @@
 EXTRA_CFLAGS += -Wall
 EXTRA_CFLAGS += -I$(ANDROID_BUILD_TOP)/vendor/cirrus/audio/dlkm/include
 
-cirrus_wm_adsp-objs = wm_adsp.o
-obj-m += cirrus_wm_adsp.o
+KBUILD_OPTIONS += $(EXTRA_CFLAGS)
 
-cirrus_cs35l45-objs = cs35l45.o cs35l45-tables.o
-obj-m += cirrus_cs35l45.o
-ccflags-y := -I $(LOCAL_DIR)/../../../include
-ccflags-y += -I $(src)/../../../include
-
-ifneq ($(filter m y,$(CONFIG_SND_SOC_CS35L45_SPI)),)
-   cirrus_cs35l45-objs += cs35l45-spi.o
+ifneq (,$(filter ironmn%, $(TARGET_PRODUCT)))
+ifneq ($(filter m y,$(CONFIG_SND_SOC_CS35L45_I2C)),)
+cirrus_cs35l45-objs = cs35l45.o cs35l45-tables.o wm_adsp.o cs35l45-i2c.o
 else
-   cirrus_cs35l45-objs += cs35l45-i2c.o
+cirrus_cs35l45-objs = cs35l45.o cs35l45-tables.o wm_adsp.o cs35l45-spi.o
+endif
+obj-m += cirrus_cs35l45.o
 endif
