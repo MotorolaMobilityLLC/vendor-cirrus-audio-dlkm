@@ -1425,18 +1425,19 @@ static void cs35l45_compr_stop_work(struct work_struct *work)
 	cs35l45_compr_switch(dsp, 0);
 }
 
-static int cs35l45_compr_open(struct snd_compr_stream *stream)
+static int cs35l45_compr_open(struct snd_soc_component *component,
+					struct snd_compr_stream *stream)
 {
 	struct snd_soc_pcm_runtime *rtd = stream->private_data;
-	struct snd_soc_component *component = snd_soc_rtdcom_lookup(rtd, DRV_NAME);
+	struct snd_soc_dai *codec_dai = asoc_rtd_to_codec(rtd, 2);
 	struct cs35l45_private *cs35l45 = snd_soc_component_get_drvdata(component);
 	__be32 buffer_size;
 	int ret;
 
-	if (strcmp(rtd->codec_dai->name, "cs35l45-dsp-dsplog")) {
+	if (strcmp(codec_dai->name, "cs35l45-dsp-dsplog")) {
 		dev_err(cs35l45->dev,
 			"No suitable compressed stream for DAI '%s'\n",
-			rtd->codec_dai->name);
+			codec_dai->name);
 		return -EINVAL;
 	}
 
@@ -1479,7 +1480,8 @@ out:
 	return ret;
 }
 
-static int cs35l45_compr_free(struct snd_compr_stream *stream)
+static int cs35l45_compr_free(struct snd_soc_component *component,
+					struct snd_compr_stream *stream)
 {
 	struct cs35l45_compr *compr = stream->runtime->private_data;
 	struct wm_adsp *dsp = compr->dsp;
@@ -1498,7 +1500,8 @@ static int cs35l45_compr_free(struct snd_compr_stream *stream)
 
 	return 0;
 }
-static int cs35l45_compr_set_params(struct snd_compr_stream *stream,
+static int cs35l45_compr_set_params(struct snd_soc_component *component,
+					struct snd_compr_stream *stream,
 				    struct snd_compr_params *params)
 {
 	struct cs35l45_compr *compr = stream->runtime->private_data;
@@ -1527,7 +1530,8 @@ static int cs35l45_compr_set_params(struct snd_compr_stream *stream,
 
 	return 0;
 }
-static int cs35l45_compr_get_caps(struct snd_compr_stream *stream,
+static int cs35l45_compr_get_caps(struct snd_soc_component *component,
+				  struct snd_compr_stream *stream,
 				  struct snd_compr_caps *caps)
 {
 	caps->codecs[0] = SND_AUDIOCODEC_BESPOKE;
@@ -1537,7 +1541,8 @@ static int cs35l45_compr_get_caps(struct snd_compr_stream *stream,
 	return 0;
 }
 
-static int cs35l45_compr_trigger(struct snd_compr_stream *stream, int cmd)
+static int cs35l45_compr_trigger(struct snd_soc_component *component,
+					struct snd_compr_stream *stream, int cmd)
 {
 	struct cs35l45_compr *compr = stream->runtime->private_data;
 	struct wm_adsp *dsp = compr->dsp;
@@ -1597,7 +1602,8 @@ static int cs35l45_buffer_update_avail(struct cs35l45_private *cs35l45)
 	return 0;
 }
 
-static int cs35l45_compr_pointer(struct snd_compr_stream *stream,
+static int cs35l45_compr_pointer(struct snd_soc_component *component,
+				 struct snd_compr_stream *stream,
 				 struct snd_compr_tstamp *tstamp)
 {
 	struct cs35l45_compr *compr = stream->runtime->private_data;
@@ -1755,7 +1761,8 @@ static int cs35l45_compr_read(struct cs35l45_compr *compr,
 	return ntotal;
 }
 
-static int cs35l45_compr_copy(struct snd_compr_stream *stream, char __user *buf,
+static int cs35l45_compr_copy(struct snd_soc_component *component,
+				  struct snd_compr_stream *stream, char __user *buf,
 			      size_t count)
 {
 	struct cs35l45_compr *compr = stream->runtime->private_data;
@@ -1774,7 +1781,7 @@ static int cs35l45_compr_copy(struct snd_compr_stream *stream, char __user *buf,
 	return ret;
 }
 
-static const struct snd_compr_ops cs35l145_compr_ops = {
+static const struct snd_compress_ops cs35l145_compr_ops = {
 	.open = &cs35l45_compr_open,
 	.free = &cs35l45_compr_free,
 	.set_params = &cs35l45_compr_set_params,
@@ -1851,7 +1858,7 @@ static const struct snd_soc_component_driver cs35l45_component = {
 	.num_controls = ARRAY_SIZE(cs35l45_aud_controls),
 
 	.name = DRV_NAME,
-	.compr_ops = &cs35l145_compr_ops,
+	.compress_ops = &cs35l145_compr_ops,
 };
 
 static int cs35l45_get_clk_config(int freq)
