@@ -878,7 +878,7 @@ static int cs42l42_mute_stream(struct snd_soc_dai *dai, int mute, int stream)
 
 		if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
 			/* Read the headphone load */
-			regval = snd_soc_component_read32(component, CS42L42_LOAD_DET_RCSTAT);
+			regval = snd_soc_component_read(component, CS42L42_LOAD_DET_RCSTAT);
 			if (((regval & CS42L42_RLA_STAT_MASK) >>
 				CS42L42_RLA_STAT_SHIFT) == CS42L42_RLA_STAT_15_OHM) {
 				fullScaleVol = CS42L42_HP_FULL_SCALE_VOL_MASK;
