@@ -4,7 +4,7 @@ EXTRA_CFLAGS += -I$(ANDROID_BUILD_TOP)/vendor/cirrus/audio/dlkm/include
 
 KBUILD_OPTIONS += $(EXTRA_CFLAGS)
 
-ifneq (,$(filter ironmn%, $(TARGET_PRODUCT)))
+ifneq (,$(filter ironmn% felix%, $(TARGET_PRODUCT)))
 ifneq ($(filter m y,$(CONFIG_SND_SOC_CS35L45_I2C)),)
 cirrus_cs35l45-objs = cs35l45.o cs35l45-tables.o wm_adsp.o cs35l45-i2c.o
 else

@@ -3,7 +3,7 @@ LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
 
-ifneq (,$(filter ironmn%, $(TARGET_PRODUCT)))
+ifneq (,$(filter ironmn% felix%, $(TARGET_PRODUCT)))
 ifeq ($(CIRRUS_CS35L45_CODEC),i2c)
 KERNEL_CFLAGS += CONFIG_SND_SOC_CS35L45_I2C=y
 else
